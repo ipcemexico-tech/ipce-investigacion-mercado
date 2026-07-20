@@ -4,6 +4,13 @@ Unidades Económicas.
 Documentado en el Anexo técnico A.3 del Informe_IPCE.docx. Usa el método
 'Cuantificar' para obtener el conteo de establecimientos por clase SCIAN,
 sin descargar el listado completo.
+
+Nota (2026-07-20): el método Cuantificar está devolviendo una respuesta
+HTTP malformada ("HTTP/1.1 000", Content-Length prometido pero cuerpo
+vacío) de forma consistente en el clúster de INEGI, independientemente del
+token usado. Confirmado con diagnóstico manual a nivel TCP/TLS — no es un
+problema de red, proxy ni de este cliente. Revisar si INEGI lo resolvió
+antes de asumir que el token es inválido.
 """
 from __future__ import annotations
 
