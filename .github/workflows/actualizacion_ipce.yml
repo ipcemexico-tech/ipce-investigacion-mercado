@@ -20,6 +20,12 @@ on:
 permissions:
   contents: write
 
+env:
+  # Interruptor del respaldo por IA (ver docs/como_activar_respaldo_ia.md).
+  # Apagado por defecto — así el sistema no genera ningún costo ni cambia
+  # de comportamiento. Cambiar a "true" solo cuando quieras activarlo.
+  RESPALDO_IA_ACTIVO: "false"
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
@@ -48,6 +54,7 @@ jobs:
           INEGI_INDICADORES_TOKEN: ${{ secrets.INEGI_INDICADORES_TOKEN }}
           INEGI_DENUE_TOKEN: ${{ secrets.INEGI_DENUE_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/run_snapshot.py --target ${{ steps.target.outputs.target }}
 
       - name: Commitear snapshot si cambió

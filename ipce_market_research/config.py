@@ -28,3 +28,10 @@ def inegi_indicadores_token() -> str:
 
 def inegi_denue_token() -> str:
     return get_required_env("INEGI_DENUE_TOKEN")
+
+
+def respaldo_ia_activo() -> bool:
+    """Interruptor maestro del respaldo por IA (Opción 1). Apagado por
+    defecto — en 'false' el sistema se comporta exactamente igual que sin
+    esta función, sin ningún costo. Ver docs/como_activar_respaldo_ia.md."""
+    return os.environ.get("RESPALDO_IA_ACTIVO", "false").strip().lower() == "true"

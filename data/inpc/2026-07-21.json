@@ -1,6 +1,15 @@
 {
   "fuente": "INEGI Banco de Indicadores — INPC general",
-  "fecha_consulta": "2026-07-21T19:36:46.441341+00:00",
+  "fecha_consulta": "2026-07-21T22:14:16.129662+00:00",
   "status": "error",
-  "error": "400 Client Error: Bad Request for url: https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR/910392/es/00/true/BISE/2.0/479bb28f-74c7-c042-bb1e-f0c1f8bf61db?type=json"
+  "error": "400 Client Error: Bad Request for url: https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR/910392/es/00/true/BISE/2.0/479bb28f-74c7-c042-bb1e-f0c1f8bf61db?type=json",
+  "respaldo": {
+    "fuente": "respaldo_investigacion_web",
+    "metodo": "Boletín mensual oficial INEGI (PDF, sin IA)",
+    "fuente_url": "https://www.inegi.org.mx/contenidos/saladeprensa/boletines/2026/inpc/inpc_2q2026_07.pdf",
+    "periodo": "junio 2026",
+    "nivel_inpc": "145.131",
+    "variacion_mensual_pct": "-0.27",
+    "variacion_anual_pct": "3.37"
+  }
 }

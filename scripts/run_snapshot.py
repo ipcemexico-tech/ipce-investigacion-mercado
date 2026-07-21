@@ -6,6 +6,13 @@ funciona igual en local. Nunca falla "duro" por un error de la API externa
 — deja constancia del error en el snapshot y en el log, para que la
 corrida programada no se vea como un pipeline roto cuando el problema es
 de la fuente externa, no del workflow.
+
+Respaldo por IA (Opción 1, ver docs/como_activar_respaldo_ia.md): si la API
+oficial falla Y config.respaldo_ia_activo() es True, intenta un respaldo:
+- INPC: lee el boletín mensual oficial en PDF (determinista, sin costo).
+- DENUE: investiga con la API de Claude + búsqueda web (con costo real).
+Con RESPALDO_IA_ACTIVO=false (el default), ninguno de los dos se ejecuta —
+el comportamiento es idéntico al de antes de que existiera esta función.
 """
 from __future__ import annotations
 
@@ -17,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from ipce_market_research import config  # noqa: E402
 from ipce_market_research.clients import denue, inegi_indicadores  # noqa: E402
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -65,9 +73,36 @@ def run_denue() -> None:
         payload["status"] = "error"
         payload["error"] = str(exc)
         print(f"::warning::DENUE Cuantificar falló: {exc}")
+
+        if config.respaldo_ia_activo():
+            print("RESPALDO_IA_ACTIVO=true — intentando respaldo por investigación web...")
+            try:
+                from ipce_market_research import respaldo_denue
+
+                resultado = respaldo_denue.investigar_denue_541610()
+                payload["respaldo"] = {
+                    "fuente": "respaldo_investigacion_web",
+                    "metodo": "Claude API + búsqueda web",
+                    **resultado,
+                }
+                print(f"::warning::Usando dato de RESPALDO (no oficial): {resultado.get('valor')}")
+            except Exception as exc_respaldo:  # noqa: BLE001
+                payload["respaldo"] = {
+                    "fuente": "respaldo_investigacion_web",
+                    "status": "error",
+                    "error": str(exc_respaldo),
+                }
+                print(f"::warning::Respaldo por IA también falló: {exc_respaldo}")
+
     path = _write_snapshot("denue", payload)
     print(f"Snapshot guardado en {path}")
-    _log_to_sheet("DENUE Cuantificar (SCIAN 541610)", payload, str(payload.get("conteo_establecimientos", "")))
+
+    if "respaldo" in payload and payload["respaldo"].get("valor"):
+        _log_to_sheet("DENUE — respaldo_investigacion_web (SCIAN 541610)", payload, str(payload["respaldo"]["valor"]))
+    else:
+        _log_to_sheet(
+            "DENUE Cuantificar (SCIAN 541610)", payload, str(payload.get("conteo_establecimientos", ""))
+        )
 
 
 def run_inpc() -> None:
@@ -91,9 +126,36 @@ def run_inpc() -> None:
             payload["status"] = "error"
             payload["error"] = str(exc)
             print(f"::warning::Consulta INPC falló: {exc}")
+
+    if payload["status"] == "error" and config.respaldo_ia_activo():
+        print("RESPALDO_IA_ACTIVO=true — intentando respaldo con el boletín oficial (sin costo)...")
+        try:
+            from ipce_market_research import respaldo_inpc
+
+            resultado = respaldo_inpc.obtener_inpc_desde_boletin()
+            payload["respaldo"] = {
+                "fuente": "respaldo_investigacion_web",
+                "metodo": "Boletín mensual oficial INEGI (PDF, sin IA)",
+                **resultado,
+            }
+            print(f"::warning::Usando dato de RESPALDO (no vía API): {resultado.get('nivel_inpc')}")
+        except Exception as exc_respaldo:  # noqa: BLE001
+            payload["respaldo"] = {
+                "fuente": "respaldo_investigacion_web",
+                "status": "error",
+                "error": str(exc_respaldo),
+            }
+            print(f"::warning::Respaldo del boletín también falló: {exc_respaldo}")
+
     path = _write_snapshot("inpc", payload)
     print(f"Snapshot guardado en {path}")
-    _log_to_sheet("INEGI Indicadores (INPC general)", payload, "")
+
+    if "respaldo" in payload and payload["respaldo"].get("nivel_inpc"):
+        _log_to_sheet(
+            "INPC — respaldo_investigacion_web (boletín oficial)", payload, str(payload["respaldo"]["nivel_inpc"])
+        )
+    else:
+        _log_to_sheet("INEGI Indicadores (INPC general)", payload, "")
 
 
 if __name__ == "__main__":

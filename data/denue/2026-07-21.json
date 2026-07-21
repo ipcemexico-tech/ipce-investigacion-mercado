@@ -1,7 +1,12 @@
 {
   "fuente": "INEGI DENUE — método Cuantificar",
   "scian": "541610",
-  "fecha_consulta": "2026-07-21T17:01:25.413120+00:00",
+  "fecha_consulta": "2026-07-21T22:14:19.039540+00:00",
   "status": "error",
-  "error": "('Connection aborted.', BadStatusLine('HTTP/1.1 000 \\r\\n'))"
+  "error": "('Connection aborted.', BadStatusLine('HTTP/1.1 000 \\r\\n'))",
+  "respaldo": {
+    "fuente": "respaldo_investigacion_web",
+    "status": "error",
+    "error": "Falta la variable de entorno ANTHROPIC_API_KEY."
+  }
 }
