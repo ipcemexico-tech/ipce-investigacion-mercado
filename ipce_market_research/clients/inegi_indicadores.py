@@ -2,15 +2,29 @@
 
 Documentado en el Anexo técnico A.3 del Informe_IPCE.docx.
 
-Nota (2026-07-20): probado en vivo contra varias combinaciones de
-indicador/área/fuente (incluido el indicador de demostración oficial de
-INEGI, Población total = 1002000001, área 0700, con BIE y BISE, recientes
-true/false). Todas devolvieron ErrorCode:100 "No se encontraron
-resultados" — una respuesta bien formada, no un error de red ni de
-autenticación (el mismo resultado se obtuvo con un token inválido de
-prueba, así que ese error no distingue token válido de inválido). No se
-pudo confirmar en vivo el indicador_id/área correctos para INPC; pendiente
-de validar con el usuario o la documentación de su cuenta de INEGI.
+Notas de diagnóstico en vivo:
+
+2026-07-20: probado contra varias combinaciones de indicador/área/fuente,
+todas con ErrorCode:100 "No se encontraron resultados". No distinguía si
+era el token, el indicador o el área.
+
+2026-07-21: confirmado con el ejemplo oficial de la documentación de INEGI
+(https://www.inegi.org.mx/servicios/api_indicadores.html) que:
+- El token SÍ es válido (probado con el indicador de demostración oficial,
+  Población total = 1002000001, área 00 → devuelve datos reales).
+- El área geográfica nacional correcta es '00' (dos dígitos) — anoche se
+  probó '0700' y '00000', ninguno es correcto.
+- El indicador 216064 (citado en fuentes de terceros, p. ej. el paquete R
+  'inegiR', como INPC general) YA NO existe en el catálogo actual de INEGI
+  (CL_INDICATOR/216064 también da "sin resultados") — probablemente
+  renumerado en una actualización del Banco de Indicadores. El indicador
+  628194 (usado como valor por defecto hasta ahora) tampoco es válido.
+
+Pendiente: obtener el indicador_id vigente para INPC general desde el
+buscador visual de INEGI (https://www.inegi.org.mx/app/indicadores/,
+buscar "Índice Nacional de Precios al Consumidor" y tomar el ID de la
+URL/resultado) — más rápido para un humano que seguir adivinando IDs
+contra la API.
 """
 from __future__ import annotations
 
@@ -20,11 +34,16 @@ from ipce_market_research.config import inegi_indicadores_token
 
 BASE_URL = "https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR"
 
-# Indicador INPC general (Índice Nacional de Precios al Consumidor) — sin confirmar en vivo.
-INPC_GENERAL = "628194"
+# Indicador INPC general — SIN CONFIRMAR. 216064 y 628194 fallaron en pruebas
+# en vivo (2026-07-20/21). Reemplazar en cuanto se tenga el ID vigente.
+INPC_GENERAL = None
 
-# Área geográfica nacional ('Estados Unidos Mexicanos') — sin confirmar en vivo.
-AREA_NACIONAL = "0700"
+# Área geográfica nacional ('Estados Unidos Mexicanos') — confirmado en vivo.
+AREA_NACIONAL = "00"
+
+# Indicador de demostración oficial de INEGI (Población total) — confirmado en vivo,
+# útil para probar que el token/pipeline funcionan sin depender del ID de INPC.
+POBLACION_TOTAL_DEMO = "1002000001"
 
 
 def consultar_indicador(
@@ -47,5 +66,10 @@ def consultar_indicador(
 
 
 if __name__ == "__main__":
+    if not INPC_GENERAL:
+        raise SystemExit(
+            "Falta confirmar INPC_GENERAL (ver notas del módulo). "
+            "Prueba temporal: consultar_indicador(POBLACION_TOTAL_DEMO)."
+        )
     data = consultar_indicador(INPC_GENERAL)
     print(data)

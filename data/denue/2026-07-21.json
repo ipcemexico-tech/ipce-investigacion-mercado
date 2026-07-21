@@ -1,0 +1,7 @@
+{
+  "fuente": "INEGI DENUE — método Cuantificar",
+  "scian": "541610",
+  "fecha_consulta": "2026-07-21T17:01:25.413120+00:00",
+  "status": "error",
+  "error": "('Connection aborted.', BadStatusLine('HTTP/1.1 000 \\r\\n'))"
+}
