@@ -23,7 +23,12 @@ Google antes de escribir este script (acceso de red bloqueado).
 """
 from __future__ import annotations
 
-from ipce_market_research.sheets_writer import DASHBOARD_SPREADSHEET_ID, _get_service
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from ipce_market_research.sheets_writer import DASHBOARD_SPREADSHEET_ID, _get_service  # noqa: E402
 
 
 def _sheet_ids(service) -> dict:
