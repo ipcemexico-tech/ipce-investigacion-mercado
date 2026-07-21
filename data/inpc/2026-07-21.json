@@ -1,6 +1,6 @@
 {
   "fuente": "INEGI Banco de Indicadores — INPC general",
-  "fecha_consulta": "2026-07-21T19:09:22.716328+00:00",
+  "fecha_consulta": "2026-07-21T19:21:32.049243+00:00",
   "status": "error",
   "error": "INPC_GENERAL sin configurar en ipce_market_research/clients/inegi_indicadores.py — falta confirmar el indicador_id vigente con el buscador de INEGI."
 }
