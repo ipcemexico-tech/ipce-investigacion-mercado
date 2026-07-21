@@ -16,10 +16,15 @@ actualizar también la columna numérica auxiliar para que el gráfico
 refleje el cambio (no se recalculan solas desde el texto).
 
 Cada gráfico se crea con su propia llamada a la API (no todas en un solo
-batchUpdate) para que un problema en un gráfico no impida crear los demás
-— esto importa especialmente para el velocímetro de Resumen, cuyo esquema
-(GaugeChartSpec) no se pudo verificar en vivo contra la documentación de
-Google antes de escribir este script (acceso de red bloqueado).
+batchUpdate) para que un problema en un gráfico no impida crear los demás.
+Además, antes de crear nada el script lee los gráficos que ya existen en el
+spreadsheet y omite (no duplica) los que ya están creados — así se puede
+reintentar el script tantas veces como haga falta sin generar copias.
+
+Nota sobre el velocímetro de Resumen: Google Sheets NO tiene un tipo de
+gráfico "gauge" real — "gaugeChart" no es un campo válido en la API
+(confirmado con un error 400 real: "Unknown name 'gaugeChart'"). Por eso
+se simula con una dona (pieChart con pieHole) de 2 rebanadas.
 """
 from __future__ import annotations
 
@@ -31,9 +36,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from ipce_market_research.sheets_writer import DASHBOARD_SPREADSHEET_ID, _get_service  # noqa: E402
 
 
-def _sheet_ids(service) -> dict:
+def _sheet_ids_y_graficos_existentes(service) -> tuple[dict, set]:
+    """Devuelve (sheetId por título, títulos de gráficos ya existentes en
+    todo el spreadsheet) — para poder reintentar el script sin duplicar
+    los gráficos que ya se crearon en una corrida anterior."""
     meta = service.spreadsheets().get(spreadsheetId=DASHBOARD_SPREADSHEET_ID).execute()
-    return {s["properties"]["title"]: s["properties"]["sheetId"] for s in meta["sheets"]}
+    ids = {s["properties"]["title"]: s["properties"]["sheetId"] for s in meta["sheets"]}
+    titulos_existentes = {
+        chart["spec"]["title"]
+        for s in meta["sheets"]
+        for chart in s.get("charts", [])
+        if "title" in chart.get("spec", {})
+    }
+    return ids, titulos_existentes
 
 
 def _values_update(service, rango: str, valores: list) -> None:
@@ -61,7 +76,12 @@ def _chart_data(sheet_id: int, start_row: int, end_row: int, col: int) -> dict:
     return {"sourceRange": {"sources": [_grid_range(sheet_id, start_row, end_row, col, col)]}}
 
 
-def _add_chart(service, chart_spec: dict, sheet_id: int, anchor_row: int, anchor_col: int, nombre: str) -> None:
+def _add_chart(
+    service, chart_spec: dict, sheet_id: int, anchor_row: int, anchor_col: int, nombre: str, titulos_existentes: set
+) -> None:
+    if chart_spec["title"] in titulos_existentes:
+        print(f"Ya existe (se omite, no se duplica): {nombre}")
+        return
     request = {
         "requests": [
             {
@@ -87,8 +107,24 @@ def _add_chart(service, chart_spec: dict, sheet_id: int, anchor_row: int, anchor
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=DASHBOARD_SPREADSHEET_ID, body=request).execute()
         print(f"OK — gráfico creado: {nombre}")
+        titulos_existentes.add(chart_spec["title"])
     except Exception as exc:  # noqa: BLE001 — un gráfico no debe tumbar los demás
         print(f"::warning::Falló el gráfico '{nombre}': {exc}")
+
+
+def _donut_gauge_spec(titulo: str, sheet_id: int, domain_row_ini: int, domain_row_fin: int, domain_col: int,
+                       series_col: int) -> dict:
+    """Simula un velocímetro con una dona de 2 rebanadas (valor vs. resto
+    de la escala) — Google Sheets no tiene un tipo de gráfico 'gauge' real."""
+    return {
+        "title": titulo,
+        "pieChart": {
+            "legendPosition": "RIGHT_LEGEND",
+            "domain": _chart_data(sheet_id, domain_row_ini, domain_row_fin, domain_col),
+            "series": _chart_data(sheet_id, domain_row_ini, domain_row_fin, series_col),
+            "pieHole": 0.65,
+        },
+    }
 
 
 def _column_chart_spec(
@@ -120,7 +156,7 @@ def _column_chart_spec(
 
 def main() -> None:
     service = _get_service()
-    ids = _sheet_ids(service)
+    ids, titulos_existentes = _sheet_ids_y_graficos_existentes(service)
 
     # ---------- 1) Sector_Competencia: Top 3 estados ----------
     sid = ids["Sector_Competencia"]
@@ -141,7 +177,8 @@ def main() -> None:
         series_defs=[(6, 24, 27), (7, 24, 27)],  # F, G — incluyen fila de encabezado
         header_count=1,
     )
-    _add_chart(service, spec, sid, anchor_row=36, anchor_col=1, nombre="Sector_Competencia — Top 3 estados")
+    _add_chart(service, spec, sid, anchor_row=36, anchor_col=1, nombre="Sector_Competencia — Top 3 estados",
+               titulos_existentes=titulos_existentes)
 
     # ---------- 2a) Gasto_Capacitacion: IMCO decil 1 vs decil 10 ----------
     sid = ids["Gasto_Capacitacion"]
@@ -161,7 +198,8 @@ def main() -> None:
         series_defs=[(6, 7, 9)],  # F
         header_count=1,
     )
-    _add_chart(service, spec, sid, anchor_row=29, anchor_col=1, nombre="Gasto_Capacitacion — IMCO por decil")
+    _add_chart(service, spec, sid, anchor_row=29, anchor_col=1, nombre="Gasto_Capacitacion — IMCO por decil",
+               titulos_existentes=titulos_existentes)
 
     # ---------- 2b) Gasto_Capacitacion: AMAI, proxy de gasto en alimentos ----------
     # A/B (alto) no tiene dato publicado por AMAI para esta columna — se omite
@@ -180,7 +218,8 @@ def main() -> None:
         series_defs=[(6, 21, 26)],  # F, sin fila de encabezado
         header_count=0,
     )
-    _add_chart(service, spec, sid, anchor_row=29, anchor_col=8, nombre="Gasto_Capacitacion — AMAI (proxy alimentos)")
+    _add_chart(service, spec, sid, anchor_row=29, anchor_col=8, nombre="Gasto_Capacitacion — AMAI (proxy alimentos)",
+               titulos_existentes=titulos_existentes)
 
     # ---------- 3) Salarios ----------
     sid = ids["Salarios"]
@@ -204,7 +243,8 @@ def main() -> None:
         series_defs=[(6, 11, 17)],  # F
         header_count=1,
     )
-    _add_chart(service, spec, sid, anchor_row=20, anchor_col=1, nombre="Salarios — puestos de calidad/procesos")
+    _add_chart(service, spec, sid, anchor_row=20, anchor_col=1, nombre="Salarios — puestos de calidad/procesos",
+               titulos_existentes=titulos_existentes)
 
     # ---------- 4) Certificaciones ----------
     sid = ids["Certificaciones"]
@@ -230,28 +270,41 @@ def main() -> None:
         series_defs=[(7, 22, 29)],  # G
         header_count=1,
     )
-    _add_chart(service, spec, sid, anchor_row=41, anchor_col=1, nombre="Certificaciones — CONOCER vs. internacionales")
+    _add_chart(service, spec, sid, anchor_row=41, anchor_col=1, nombre="Certificaciones — CONOCER vs. internacionales",
+               titulos_existentes=titulos_existentes)
 
-    # ---------- 5) Resumen: velocímetro tamaño de mercado vs. IPCE ----------
+    # ---------- 5) Resumen: "velocímetro" (dona) tamaño de mercado vs. IPCE ----------
+    # Google Sheets no tiene un tipo de gráfico "gauge" real (gaugeChart no
+    # existe en la API — confirmado por error 400 en un intento anterior).
+    # Se simula con una dona de 2 rebanadas: participación de IPCE dentro de
+    # una escala 0-5%, y el resto de esa escala.
+    #
     # B24 pasa de texto de relleno ("completar B23") a una fórmula real:
     # con B23 sin llenar (texto "[COMPLETAR]"), da 0 de forma segura; en
-    # cuanto el usuario ponga un número en B23, el velocímetro se actualiza solo.
+    # cuanto el usuario ponga un número en B23, la dona se actualiza sola.
     sid_resumen = ids["Resumen"]
     _values_update(
         service,
         "Resumen!B24",
         [["=IF(ISNUMBER(B23), B23/B22*100, 0)"]],
     )
-    gauge_spec = {
-        "title": "Participación de mercado estimada de IPCE (%) — escala 0-5%, ajustar el máximo "
-        "cuando se conozca el ingreso real de IPCE",
-        "gaugeChart": {
-            "dataRange": _chart_data(sid_resumen, 24, 24, 2),  # B24
-            "min": 0,
-            "max": 5,
-        },
-    }
-    _add_chart(service, gauge_spec, sid_resumen, anchor_row=27, anchor_col=1, nombre="Resumen — velocímetro de mercado")
+    _values_update(
+        service,
+        "Resumen!I27:J28",
+        [
+            ["Participación IPCE (dentro de escala 0-5%)", "=MIN(B24,5)"],
+            ["Resto de la escala (hasta 5%)", "=MAX(0,5-B24)"],
+        ],
+    )
+    donut_spec = _donut_gauge_spec(
+        "Participación de mercado estimada de IPCE (%) — dona simula velocímetro, escala 0-5%; "
+        "ajustar el máximo en I27:J28 cuando se conozca el ingreso real de IPCE",
+        sid_resumen,
+        domain_row_ini=27, domain_row_fin=28, domain_col=9,  # I
+        series_col=10,  # J
+    )
+    _add_chart(service, donut_spec, sid_resumen, anchor_row=27, anchor_col=1, nombre="Resumen — dona (velocímetro) de mercado",
+               titulos_existentes=titulos_existentes)
 
 
 if __name__ == "__main__":
