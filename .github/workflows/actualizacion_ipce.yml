@@ -47,6 +47,7 @@ jobs:
         env:
           INEGI_INDICADORES_TOKEN: ${{ secrets.INEGI_INDICADORES_TOKEN }}
           INEGI_DENUE_TOKEN: ${{ secrets.INEGI_DENUE_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: python scripts/run_snapshot.py --target ${{ steps.target.outputs.target }}
 
       - name: Commitear snapshot si cambió

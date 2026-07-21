@@ -22,6 +22,26 @@ from ipce_market_research.clients import denue, inegi_indicadores  # noqa: E402
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
+def _log_to_sheet(fuente: str, payload: dict, valor: str) -> None:
+    """Registra el resultado en la pestaña Auto_Log del Dashboard. Nunca
+    rompe la corrida si falla (dependencias no instaladas, credenciales no
+    configuradas, permisos, etc.) — solo lo advierte en el log. La
+    importación es local a esta función a propósito: si el stack de
+    google-auth no está disponible, el resto del script (INPC/DENUE) debe
+    seguir funcionando igual."""
+    try:
+        from ipce_market_research import sheets_writer
+
+        sheets_writer.append_log_row(
+            fuente=fuente,
+            status=payload["status"],
+            valor=valor,
+            detalle=payload.get("error", ""),
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"::warning::No se pudo escribir en Auto_Log del Dashboard: {exc}")
+
+
 def _write_snapshot(fuente: str, payload: dict) -> Path:
     fecha = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     out_dir = DATA_DIR / fuente
@@ -47,6 +67,7 @@ def run_denue() -> None:
         print(f"::warning::DENUE Cuantificar falló: {exc}")
     path = _write_snapshot("denue", payload)
     print(f"Snapshot guardado en {path}")
+    _log_to_sheet("DENUE Cuantificar (SCIAN 541610)", payload, str(payload.get("conteo_establecimientos", "")))
 
 
 def run_inpc() -> None:
@@ -72,6 +93,7 @@ def run_inpc() -> None:
             print(f"::warning::Consulta INPC falló: {exc}")
     path = _write_snapshot("inpc", payload)
     print(f"Snapshot guardado en {path}")
+    _log_to_sheet("INEGI Indicadores (INPC general)", payload, "")
 
 
 if __name__ == "__main__":
