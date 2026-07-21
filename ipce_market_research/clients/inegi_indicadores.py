@@ -8,23 +8,43 @@ Notas de diagnóstico en vivo:
 todas con ErrorCode:100 "No se encontraron resultados". No distinguía si
 era el token, el indicador o el área.
 
-2026-07-21: confirmado con el ejemplo oficial de la documentación de INEGI
-(https://www.inegi.org.mx/servicios/api_indicadores.html) que:
-- El token SÍ es válido (probado con el indicador de demostración oficial,
-  Población total = 1002000001, área 00 → devuelve datos reales).
-- El área geográfica nacional correcta es '00' (dos dígitos) — anoche se
-  probó '0700' y '00000', ninguno es correcto.
-- El indicador 216064 (citado en fuentes de terceros, p. ej. el paquete R
-  'inegiR', como INPC general) YA NO existe en el catálogo actual de INEGI
-  (CL_INDICATOR/216064 también da "sin resultados") — probablemente
-  renumerado en una actualización del Banco de Indicadores. El indicador
-  628194 (usado como valor por defecto hasta ahora) tampoco es válido.
+2026-07-21 (mañana): confirmado con el ejemplo oficial de la documentación
+de INEGI que el token es válido (probado con el indicador de demostración
+oficial, Población total = 1002000001, área 00 → devuelve datos reales) y
+que el área nacional correcta para ESE indicador es '00'. Los indicadores
+216064 y 628194 citados por fuentes de terceros no existían en el catálogo
+(CL_INDICATOR también los rechazaba).
 
-Pendiente: obtener el indicador_id vigente para INPC general desde el
-buscador visual de INEGI (https://www.inegi.org.mx/app/indicadores/,
-buscar "Índice Nacional de Precios al Consumidor" y tomar el ID de la
-URL/resultado) — más rápido para un humano que seguir adivinando IDs
-contra la API.
+2026-07-21 (tarde): el usuario pidió consultar directamente el buscador
+oficial de INEGI en vez de adivinar. Se localizó el endpoint interno real
+que usa el buscador del sitio (no requiere token):
+POST https://www.inegi.org.mx/app/api/buscadorcore/v1/busquedaBIE/
+body: {"busqueda": "<texto>", "paginaInicio":1, "paginaFin":100,
+"filtrobusqueda":"CBUSQUEDA", "filtrotema":"NULL", "orderby":"RANKING",
+"orderbyAscDesc":"DESC", "metodoBusqueda":1, "busquedaCiencia":""}
+
+Con eso se confirmaron, con título y ranking reales de INEGI, dos IDs
+para "INPC > Mensual > Índice > Índice general":
+- 910392 — serie vigente, "Actualización de Canasta y Ponderadores 2024"
+  (la misma metodología que ya cita el Informe_IPCE). Es el que se debe
+  usar.
+- 628194 — serie anterior (pre-2024), la que se había supuesto antes.
+
+Sin embargo NINGUNO de los dos responde en la API pública con token
+(INDICATOR/<id>/es/<área>/...), probando área '00' y '0', y fuente 'BISE'
+y 'BIE': siempre ErrorCode:100 "No se encontraron resultados". Se probó
+también con un tercer indicador de un dominio totalmente distinto (Tasa
+de participación laboral, 451778, también verificado como real vía el
+mismo buscador) y falló igual — mientras que el indicador de demostración
+oficial (Población total, 1002000001) sí funciona con área '00'.
+
+Conclusión: esto ya no parece ser un problema de "adivinar el ID o el
+área" — parece una limitación real de la API pública con token, que no
+está sirviendo datos para indicadores de las familias más recientes
+(posiblemente relacionado con la reorganización del catálogo BIE que
+INEGI hizo a partir de diciembre 2025). Pendiente: escalar con soporte de
+INEGI, o reintentar más adelante por si es un problema temporal de
+sincronización de catálogos.
 """
 from __future__ import annotations
 
@@ -34,11 +54,15 @@ from ipce_market_research.config import inegi_indicadores_token
 
 BASE_URL = "https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR"
 
-# Indicador INPC general — SIN CONFIRMAR. 216064 y 628194 fallaron en pruebas
-# en vivo (2026-07-20/21). Reemplazar en cuanto se tenga el ID vigente.
-INPC_GENERAL = None
+# Indicador INPC general mensual (Índice general), vigente — confirmado por
+# el buscador oficial de INEGI (título, ranking y fecha de publicación
+# reales), pero la API pública con token no lo sirve todavía (ver notas
+# arriba). No es un ID inventado ni adivinado.
+INPC_GENERAL = "910392"
 
-# Área geográfica nacional ('Estados Unidos Mexicanos') — confirmado en vivo.
+# Área geográfica nacional ('Estados Unidos Mexicanos') — confirmado en vivo
+# para el indicador de demostración (1002000001), pero NO funcionó para
+# INPC_GENERAL ni para otros indicadores recientes probados.
 AREA_NACIONAL = "00"
 
 # Indicador de demostración oficial de INEGI (Población total) — confirmado en vivo,
@@ -66,10 +90,5 @@ def consultar_indicador(
 
 
 if __name__ == "__main__":
-    if not INPC_GENERAL:
-        raise SystemExit(
-            "Falta confirmar INPC_GENERAL (ver notas del módulo). "
-            "Prueba temporal: consultar_indicador(POBLACION_TOTAL_DEMO)."
-        )
     data = consultar_indicador(INPC_GENERAL)
     print(data)
