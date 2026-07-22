@@ -19,9 +19,16 @@ exitosa real en este proyecto (siempre ErrorCode:100 — ver
 clients/inegi_indicadores.py), así que no existe una forma confirmada de
 interpretar su JSON. En vez de adivinar esa forma, las celdas de Macro/
 Resumen solo se actualizan desde el respaldo del boletín PDF (formato ya
-verificado contra un boletín real). Cuando la API oficial empiece a
-devolver datos de verdad, se puede agregar su propio mapeo con el mismo
-patrón, ya confirmado con datos reales en mano — no antes.
+verificado contra un boletín real).
+
+INSTRUCCIÓN EXPLÍCITA DEL USUARIO (2026-07-22): cuando la API oficial de
+Indicadores de INEGI vuelva a responder, NO conectar su resultado a
+celdas visibles automáticamente, ni siquiera si el JSON parece tener el
+formato esperado. Primero correr una prueba manual (workflow_dispatch,
+sin tocar este mapeo) y revisar la respuesta real junto con el usuario
+para confirmar su formato exacto. Recién después de esa confirmación
+conjunta se agrega el mapeo correspondiente (mismo patrón que
+OBJETIVOS_INPC_RESPALDO_BOLETIN, ya probado).
 
 Para DENUE sí se cubren ambos caminos (API oficial y respaldo por IA),
 porque el formato de ambos ya está confirmado: la API oficial de

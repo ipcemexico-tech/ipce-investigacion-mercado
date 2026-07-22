@@ -17,9 +17,9 @@ on:
           - inpc
           - denue
       actualizar_celdas_dashboard:
-        description: "Actualizar también las celdas visibles del Dashboard (Macro/Resumen/Sector_Competencia), no solo Auto_Log — úsalo para probar antes de activarlo en las corridas programadas"
+        description: "Actualizar también las celdas visibles del Dashboard (Macro/Resumen/Sector_Competencia), no solo Auto_Log — ya es el comportamiento normal en las corridas programadas; este campo es para poder desactivarlo puntualmente en una corrida manual si hiciera falta"
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -35,10 +35,10 @@ env:
   # solo cuando quieras activarlo. Ver docs/como_activar_respaldo_ia.md.
   RESPALDO_DENUE_IA_ACTIVO: "false"
   # Interruptor de escritura en celdas visibles del Dashboard, además de
-  # Auto_Log (ver ipce_market_research/dashboard_updater.py). Apagado por
-  # defecto en las corridas PROGRAMADAS hasta confirmar con una corrida
-  # manual (usando el input de arriba) que escribe donde debe.
-  ACTUALIZAR_CELDAS_DASHBOARD: "false"
+  # Auto_Log (ver ipce_market_research/dashboard_updater.py). Confirmado
+  # con una corrida manual real (2026-07-22) que escribe donde debe —
+  # activo por defecto también en las corridas PROGRAMADAS.
+  ACTUALIZAR_CELDAS_DASHBOARD: "true"
 
 jobs:
   snapshot:
@@ -69,7 +69,7 @@ jobs:
           INEGI_DENUE_TOKEN: ${{ secrets.INEGI_DENUE_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ACTUALIZAR_CELDAS_DASHBOARD: ${{ github.event_name == 'workflow_dispatch' && inputs.actualizar_celdas_dashboard || 'false' }}
+          ACTUALIZAR_CELDAS_DASHBOARD: ${{ github.event_name == 'workflow_dispatch' && inputs.actualizar_celdas_dashboard || 'true' }}
         run: python scripts/run_snapshot.py --target ${{ steps.target.outputs.target }}
 
       - name: Commitear snapshot si cambió
