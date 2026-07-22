@@ -30,11 +30,19 @@ def inegi_denue_token() -> str:
     return get_required_env("INEGI_DENUE_TOKEN")
 
 
-def respaldo_ia_activo() -> bool:
-    """Interruptor maestro del respaldo por IA (Opción 1). Apagado por
-    defecto — en 'false' el sistema se comporta exactamente igual que sin
-    esta función, sin ningún costo. Ver docs/como_activar_respaldo_ia.md."""
-    return os.environ.get("RESPALDO_IA_ACTIVO", "false").strip().lower() == "true"
+def respaldo_inpc_activo() -> bool:
+    """Interruptor del respaldo del INPC (boletín PDF oficial de INEGI).
+    Determinista, sin IA y SIN COSTO — por eso está ACTIVO por defecto.
+    Ver docs/como_activar_respaldo_ia.md."""
+    return os.environ.get("RESPALDO_INPC_ACTIVO", "true").strip().lower() == "true"
+
+
+def respaldo_denue_ia_activo() -> bool:
+    """Interruptor del respaldo de DENUE por IA (Claude + búsqueda web).
+    Genera un costo real por uso — por eso está APAGADO por defecto. Con
+    'false' el sistema se comporta exactamente igual que sin esta
+    función. Ver docs/como_activar_respaldo_ia.md."""
+    return os.environ.get("RESPALDO_DENUE_IA_ACTIVO", "false").strip().lower() == "true"
 
 
 def actualizar_celdas_dashboard_activo() -> bool:

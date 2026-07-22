@@ -8,8 +8,9 @@ Claude con la herramienta de búsqueda web para investigar el dato más
 reciente disponible en fuentes públicas, dejando siempre explícito que es
 una investigación, no una lectura directa de la API oficial.
 
-Solo se ejecuta si RESPALDO_IA_ACTIVO=true (ver config.respaldo_ia_activo) —
-requiere ANTHROPIC_API_KEY y genera costo real por uso.
+Solo se ejecuta si RESPALDO_DENUE_IA_ACTIVO=true (ver
+config.respaldo_denue_ia_activo) — requiere ANTHROPIC_API_KEY y genera
+costo real por uso.
 """
 from __future__ import annotations
 
@@ -60,7 +61,7 @@ class RespaldoIANoDisponible(RuntimeError):
 def investigar(pregunta: str, timeout: int = 120) -> dict:
     """Consulta la API de Claude con búsqueda web para un dato específico.
     Genera costo real por uso — solo se debe llamar cuando
-    config.respaldo_ia_activo() es True."""
+    config.respaldo_denue_ia_activo() es True."""
     try:
         import anthropic
     except ImportError as exc:

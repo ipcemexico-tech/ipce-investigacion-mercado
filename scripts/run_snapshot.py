@@ -7,12 +7,16 @@ funciona igual en local. Nunca falla "duro" por un error de la API externa
 corrida programada no se vea como un pipeline roto cuando el problema es
 de la fuente externa, no del workflow.
 
-Respaldo por IA (Opción 1, ver docs/como_activar_respaldo_ia.md): si la API
-oficial falla Y config.respaldo_ia_activo() es True, intenta un respaldo:
-- INPC: lee el boletín mensual oficial en PDF (determinista, sin costo).
-- DENUE: investiga con la API de Claude + búsqueda web (con costo real).
-Con RESPALDO_IA_ACTIVO=false (el default), ninguno de los dos se ejecuta —
-el comportamiento es idéntico al de antes de que existiera esta función.
+Respaldo cuando la API oficial falla (ver docs/como_activar_respaldo_ia.md),
+con DOS interruptores independientes:
+- INPC: lee el boletín mensual oficial en PDF (determinista, sin costo) si
+  config.respaldo_inpc_activo() es True — ACTIVO por defecto, porque no
+  genera ningún costo.
+- DENUE: investiga con la API de Claude + búsqueda web (con costo real) si
+  config.respaldo_denue_ia_activo() es True — APAGADO por defecto.
+Con RESPALDO_DENUE_IA_ACTIVO=false (el default), el respaldo de DENUE nunca
+se ejecuta — el comportamiento para DENUE es idéntico al de antes de que
+existiera esa función.
 
 Actualización de celdas visibles (ver dashboard_updater.py/dashboard_mapeo.py):
 si config.actualizar_celdas_dashboard_activo() es True Y hay un dato nuevo
@@ -104,8 +108,8 @@ def run_denue() -> None:
         payload["error"] = str(exc)
         print(f"::warning::DENUE Cuantificar falló: {exc}")
 
-        if config.respaldo_ia_activo():
-            print("RESPALDO_IA_ACTIVO=true — intentando respaldo por investigación web...")
+        if config.respaldo_denue_ia_activo():
+            print("RESPALDO_DENUE_IA_ACTIVO=true — intentando respaldo por investigación web...")
             try:
                 from ipce_market_research import respaldo_denue
 
@@ -165,8 +169,8 @@ def run_inpc() -> None:
             payload["error"] = str(exc)
             print(f"::warning::Consulta INPC falló: {exc}")
 
-    if payload["status"] == "error" and config.respaldo_ia_activo():
-        print("RESPALDO_IA_ACTIVO=true — intentando respaldo con el boletín oficial (sin costo)...")
+    if payload["status"] == "error" and config.respaldo_inpc_activo():
+        print("RESPALDO_INPC_ACTIVO=true — intentando respaldo con el boletín oficial (sin costo)...")
         try:
             from ipce_market_research import respaldo_inpc
 

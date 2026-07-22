@@ -26,10 +26,14 @@ permissions:
   contents: write
 
 env:
-  # Interruptor del respaldo por IA (ver docs/como_activar_respaldo_ia.md).
-  # Apagado por defecto — así el sistema no genera ningún costo ni cambia
-  # de comportamiento. Cambiar a "true" solo cuando quieras activarlo.
-  RESPALDO_IA_ACTIVO: "false"
+  # Interruptor del respaldo del INPC (boletín PDF oficial de INEGI, sin
+  # IA). Determinista y SIN COSTO — por eso está activo por defecto. Ver
+  # docs/como_activar_respaldo_ia.md.
+  RESPALDO_INPC_ACTIVO: "true"
+  # Interruptor del respaldo de DENUE por IA (Claude + búsqueda web).
+  # Genera un costo real por uso — apagado por defecto. Cambiar a "true"
+  # solo cuando quieras activarlo. Ver docs/como_activar_respaldo_ia.md.
+  RESPALDO_DENUE_IA_ACTIVO: "false"
   # Interruptor de escritura en celdas visibles del Dashboard, además de
   # Auto_Log (ver ipce_market_research/dashboard_updater.py). Apagado por
   # defecto en las corridas PROGRAMADAS hasta confirmar con una corrida
