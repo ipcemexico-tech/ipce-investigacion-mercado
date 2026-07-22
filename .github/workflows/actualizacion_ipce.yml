@@ -16,6 +16,11 @@ on:
         options:
           - inpc
           - denue
+      actualizar_celdas_dashboard:
+        description: "Actualizar también las celdas visibles del Dashboard (Macro/Resumen/Sector_Competencia), no solo Auto_Log — úsalo para probar antes de activarlo en las corridas programadas"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -25,6 +30,11 @@ env:
   # Apagado por defecto — así el sistema no genera ningún costo ni cambia
   # de comportamiento. Cambiar a "true" solo cuando quieras activarlo.
   RESPALDO_IA_ACTIVO: "false"
+  # Interruptor de escritura en celdas visibles del Dashboard, además de
+  # Auto_Log (ver ipce_market_research/dashboard_updater.py). Apagado por
+  # defecto en las corridas PROGRAMADAS hasta confirmar con una corrida
+  # manual (usando el input de arriba) que escribe donde debe.
+  ACTUALIZAR_CELDAS_DASHBOARD: "false"
 
 jobs:
   snapshot:
@@ -55,6 +65,7 @@ jobs:
           INEGI_DENUE_TOKEN: ${{ secrets.INEGI_DENUE_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ACTUALIZAR_CELDAS_DASHBOARD: ${{ github.event_name == 'workflow_dispatch' && inputs.actualizar_celdas_dashboard || 'false' }}
         run: python scripts/run_snapshot.py --target ${{ steps.target.outputs.target }}
 
       - name: Commitear snapshot si cambió

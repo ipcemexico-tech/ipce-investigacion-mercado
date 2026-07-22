@@ -13,6 +13,14 @@ oficial falla Y config.respaldo_ia_activo() es True, intenta un respaldo:
 - DENUE: investiga con la API de Claude + búsqueda web (con costo real).
 Con RESPALDO_IA_ACTIVO=false (el default), ninguno de los dos se ejecuta —
 el comportamiento es idéntico al de antes de que existiera esta función.
+
+Actualización de celdas visibles (ver dashboard_updater.py/dashboard_mapeo.py):
+si config.actualizar_celdas_dashboard_activo() es True Y hay un dato nuevo
+utilizable, además de la fila de siempre en Auto_Log se intenta actualizar
+la celda correspondiente en Macro/Resumen/Sector_Competencia — validando
+antes el tipo de cada celda para no corromper nada. Con
+ACTUALIZAR_CELDAS_DASHBOARD=false (el default), no se toca ninguna celda
+visible — el comportamiento es idéntico al de antes de esta función.
 """
 from __future__ import annotations
 
@@ -48,6 +56,28 @@ def _log_to_sheet(fuente: str, payload: dict, valor: str) -> None:
         )
     except Exception as exc:  # noqa: BLE001
         print(f"::warning::No se pudo escribir en Auto_Log del Dashboard: {exc}")
+
+
+def _actualizar_celdas_visibles(nombre_objetivos: str, datos: dict, contexto: str) -> None:
+    """Actualiza celdas visibles del Dashboard (Macro/Resumen/
+    Sector_Competencia) si config.actualizar_celdas_dashboard_activo() lo
+    permite. Nunca rompe la corrida — cualquier falla (credenciales,
+    permisos, dependencias, incluso que dashboard_mapeo no se pueda
+    importar) solo se advierte, igual que _log_to_sheet. Por eso el mapeo
+    se resuelve por nombre y se importa aquí adentro, en vez de que quien
+    llama importe dashboard_mapeo directamente."""
+    if not config.actualizar_celdas_dashboard_activo():
+        return
+    try:
+        from ipce_market_research import dashboard_mapeo, dashboard_updater
+
+        objetivos = getattr(dashboard_mapeo, nombre_objetivos)
+        resultados = dashboard_updater.actualizar_dashboard_y_registrar(objetivos, datos, contexto)
+        for r in resultados:
+            marca = "OK" if r["status"] == "ok" else f"::warning::{r['status'].upper()}"
+            print(f"[Dashboard visible] {marca} — {r['celda']}: {r['detalle']}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"::warning::No se pudieron actualizar las celdas visibles del Dashboard: {exc}")
 
 
 def _write_snapshot(fuente: str, payload: dict) -> Path:
@@ -99,10 +129,18 @@ def run_denue() -> None:
 
     if "respaldo" in payload and payload["respaldo"].get("valor"):
         _log_to_sheet("DENUE — respaldo_investigacion_web (SCIAN 541610)", payload, str(payload["respaldo"]["valor"]))
+        datos = {"valor": payload["respaldo"]["valor"], "fecha_dato": payload["respaldo"].get("fecha_dato")}
+        _actualizar_celdas_visibles("OBJETIVOS_DENUE_RESPALDO", datos, "DENUE respaldo IA")
     else:
         _log_to_sheet(
             "DENUE Cuantificar (SCIAN 541610)", payload, str(payload.get("conteo_establecimientos", ""))
         )
+        if payload["status"] == "ok":
+            datos = {
+                "conteo": payload["conteo_establecimientos"],
+                "fecha": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            }
+            _actualizar_celdas_visibles("OBJETIVOS_DENUE_OFICIAL", datos, "DENUE oficial")
 
 
 def run_inpc() -> None:
@@ -153,6 +191,9 @@ def run_inpc() -> None:
     if "respaldo" in payload and payload["respaldo"].get("nivel_inpc"):
         _log_to_sheet(
             "INPC — respaldo_investigacion_web (boletín oficial)", payload, str(payload["respaldo"]["nivel_inpc"])
+        )
+        _actualizar_celdas_visibles(
+            "OBJETIVOS_INPC_RESPALDO_BOLETIN", payload["respaldo"], "INPC respaldo boletín"
         )
     else:
         _log_to_sheet("INEGI Indicadores (INPC general)", payload, "")
