@@ -1,0 +1,6 @@
+{
+  "fuente": "INEGI Banco de Indicadores — INPC general",
+  "fecha_consulta": "2026-07-22T06:57:55.972379+00:00",
+  "status": "error",
+  "error": "400 Client Error: Bad Request for url: https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR/910392/es/00/true/BISE/2.0/479bb28f-74c7-c042-bb1e-f0c1f8bf61db?type=json"
+}
