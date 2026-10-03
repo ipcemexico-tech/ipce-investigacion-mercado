@@ -1,0 +1,7 @@
+{
+  "fuente": "INEGI DENUE — método Cuantificar",
+  "scian": "541610",
+  "fecha_consulta": "2026-10-03T10:35:01.190489+00:00",
+  "status": "error",
+  "error": "invalid literal for int() with base 10: '\"No autorizado. Utilice una clave válida.\"'"
+}
